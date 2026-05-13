@@ -1,0 +1,13 @@
+[package]
+name = "swayllow"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+swayipc = "4.0.0"
+sysinfo = "0.39.1"
+
+[profile.release]
+strip = true
+opt-level = "s"
+lto = true
