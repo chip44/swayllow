@@ -8,6 +8,11 @@ clap = { version = "4.6.1", features = ["derive"] }
 swayipc = "4.0.0"
 sysinfo = "0.39.1"
 
+[lints.clippy]
+pedantic = "deny"
+nursery = "deny"
+unwrap_used = "deny"
+
 [profile.release]
 strip = true
 opt-level = "s"
