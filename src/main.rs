@@ -3,16 +3,9 @@ use swayipc::{Connection, EventType, Node};
 use swayipc::{Event, WindowChange};
 use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, RefreshKind, System};
 
-trait OptionExt<T> {
-    fn ok_or_sway(self, msg: &str) -> Result<T, swayipc::Error>;
-}
-
-impl<T> OptionExt<T> for Option<T> {
-    /// small helper to convert `Result<T, Error>` to `Result<T, swayipc::Error>`
-    /// because sometimes rust sucks
-    fn ok_or_sway(self, msg: &str) -> Result<T, swayipc::Error> {
-        self.ok_or_else(|| swayipc::Error::Io(std::io::Error::other(msg)))
-    }
+/// transform `Option<T>` to `Result<T, swayipc::Error>`
+fn sway_err<T>(opt: Option<T>, msg: &str) -> Result<T, swayipc::Error> {
+    opt.ok_or_else(|| swayipc::Error::Io(std::io::Error::other(msg)))
 }
 
 fn matches_any(conn: &mut Connection, pid: u32, criteria: &[String], mark: &str) -> bool {
@@ -59,13 +52,13 @@ fn swallow(
     node: &Node,
     args: &Args,
 ) -> Result<(), swayipc::Error> {
-    let pid = node.pid.ok_or_sway("Missing PID")?.cast_unsigned();
+    let pid = sway_err(node.pid, "Missing PID")?.cast_unsigned();
     if is_terminal(conn, pid, &args.terminal) || is_noswallow(conn, pid, &args.noswallow) {
         return Ok(());
     }
 
     let tree = conn.get_tree()?;
-    let parent_pid = find_parent_view_pid(&tree, pid, sys).ok_or_sway("No parent")?;
+    let parent_pid = sway_err(find_parent_view_pid(&tree, pid, sys), "No parent")?;
     if !is_terminal(conn, parent_pid, &args.terminal) {
         return Ok(());
     }
@@ -81,7 +74,7 @@ fn swallow(
 }
 
 fn unswallow(conn: &mut Connection, node: &Node) -> Result<(), swayipc::Error> {
-    let pid = node.pid.ok_or_sway("Missing PID")?;
+    let pid = sway_err(node.pid, "Missing PID")?;
 
     // a program can have multiple windows sharing the same PID (e.g. settings
     // dialogs). only unswallow once every window for this PID is actually gone,
