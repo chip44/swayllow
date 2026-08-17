@@ -1,7 +1,7 @@
 use clap::Parser;
 use swayipc::{Connection, EventType, Node};
 use swayipc::{Event, WindowChange};
-use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, RefreshKind, System};
+use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System};
 
 /// transform `Option<T>` to `Result<T, swayipc::Error>`
 fn sway_err<T>(opt: Option<T>, msg: &str) -> Result<T, swayipc::Error> {
@@ -31,7 +31,11 @@ fn is_noswallow(conn: &mut Connection, pid: u32, criteria: &[String]) -> bool {
 /// find the closest parent process that has a valid view node in the tree,
 /// since not all processes appear as views (e.g. shell processes).
 fn find_parent_view_pid(tree: &Node, child_pid: u32, sys: &mut System) -> Option<u32> {
-    sys.refresh_processes(ProcessesToUpdate::All, true);
+    sys.refresh_processes_specifics(
+        ProcessesToUpdate::All,
+        true,
+        ProcessRefreshKind::nothing().without_tasks(),
+    );
 
     let mut current_pid = child_pid;
     loop {
@@ -108,9 +112,7 @@ struct Args {
 fn main() -> Result<(), swayipc::Error> {
     let args = Args::parse();
 
-    let mut sys = System::new_with_specifics(
-        RefreshKind::nothing().with_processes(ProcessRefreshKind::everything()),
-    );
+    let mut sys = System::new();
 
     let mut conn = Connection::new()?;
     for event in Connection::new()?.subscribe([EventType::Window])? {
