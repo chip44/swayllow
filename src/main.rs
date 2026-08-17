@@ -81,7 +81,15 @@ fn swallow(
 }
 
 fn unswallow(conn: &mut Connection, node: &Node) -> Result<(), swayipc::Error> {
-    let pid = node.pid.ok_or_sway("Missing PID")?.cast_unsigned();
+    let pid = node.pid.ok_or_sway("Missing PID")?;
+
+    // a program can have multiple windows sharing the same PID (e.g. settings
+    // dialogs). only unswallow once every window for this PID is actually gone,
+    // otherwise closing just the dialog would return the terminal prematurely.
+    let tree = conn.get_tree()?;
+    if tree.find_as_ref(|n| n.pid == Some(pid)).is_some() {
+        return Ok(());
+    }
 
     conn.run_command(format!(
         "[con_mark=_swallow_{pid}] focus, floating disable, unmark _swallow_{pid}"
